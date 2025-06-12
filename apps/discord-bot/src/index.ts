@@ -1,54 +1,108 @@
-// Import the types we need
+// apps/analytics-service/src/index.ts
 import { prisma, ApiRequestLog } from '@repo/db';
+import { logger } from '@repo/logger'; // Centralized logging utility
+import { AnalyticsReport, ServiceUsage } from './types';
+import { config } from './config'; // Configuration for the analytics job
 
-async function runAnalytics() {
-  console.log('Running daily analytics job...');
+async function runAnalytics(): Promise<AnalyticsReport | null> {
+  logger.info('Starting daily analytics job', { timestamp: new Date().toISOString() });
 
   try {
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
+    // 1. Define the time range based on configuration
+    const endDate = new Date();
+    const startDate = new Date(endDate.getTime() - config.timeRangeHours * 60 * 60 * 1000);
 
+    // 2. Query logs with optimized selection
     const recentLogs = await prisma.apiRequestLog.findMany({
       where: {
         createdAt: {
-          gte: yesterday,
+          gte: startDate,
+          lte: endDate,
         },
+      },
+      select: {
+        status: true,
+        service: true,
+        responseTime: true, // Assuming this field exists
       },
     });
 
     if (recentLogs.length === 0) {
-      console.log('No activity in the last 24 hours.');
-      return;
+      logger.warn('No API request logs found', { startDate, endDate });
+      return null;
     }
 
-    // Explicitly type the 'log' parameter
+    // 3. Calculate metrics
+    const totalRequests = recentLogs.length;
     const successfulRequests = recentLogs.filter((log: ApiRequestLog) => log.status === 'SUCCESS').length;
-    const failedRequests = recentLogs.length - successfulRequests;
-    const successRate = (successfulRequests / recentLogs.length) * 100;
+    const failedRequests = totalRequests - successfulRequests;
+    const successRate = (successfulRequests / totalRequests) * 100;
 
-    // Explicitly type the accumulator and the log
-    const usageByService = recentLogs.reduce((acc: Record<string, number>, log: ApiRequestLog) => {
+    const usageByService: ServiceUsage = recentLogs.reduce((acc: ServiceUsage, log: ApiRequestLog) => {
       acc[log.service] = (acc[log.service] || 0) + 1;
       return acc;
     }, {});
 
+    // 4. Calculate additional metrics (e.g., average response time)
+    const avgResponseTime =
+      recentLogs.reduce((sum: number, log: ApiRequestLog) => sum + (log.responseTime || 0), 0) / totalRequests;
 
-    console.log('\n--- Daily Analytics Report ---');
-    console.log(`Total Requests (24h): ${recentLogs.length}`);
-    console.log(`✅ Successful: ${successfulRequests}`);
-    console.log(`❌ Failed: ${failedRequests}`);
-    console.log(`📈 Success Rate: ${successRate.toFixed(2)}%`);
-    console.log('\nUsage by Service:');
-    for (const service in usageByService) {
-      console.log(`- ${service}: ${usageByService[service]} requests`);
-    }
-    console.log('--- End of Report ---\n');
+    // 5. Build the report
+    const report: AnalyticsReport = {
+      totalRequests,
+      successfulRequests,
+      failedRequests,
+      successRate,
+      usageByService,
+      avgResponseTime,
+      timestamp: endDate,
+    };
 
-  } catch (error) {
-    console.error('Failed to run analytics job:', error);
+    // 6. Log the report in a structured format
+    logger.info('Daily Analytics Report', {
+      ...report,
+      successRate: `${report.successRate.toFixed(2)}%`,
+      avgResponseTime: `${report.avgResponseTime.toFixed(2)}ms`,
+    });
+
+    // 7. Save the report to the database
+    await prisma.analyticsReport.create({
+      data: {
+        totalRequests,
+        successfulRequests,
+        failedRequests,
+        successRate,
+        avgResponseTime,
+        usageByService: JSON.stringify(usageByService),
+        createdAt: report.timestamp,
+      },
+    });
+
+    return report;
+
+  } catch (error: unknown) {
+    logger.error('Failed to run analytics job', {
+      error: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+    });
+    throw error; // Allow caller to handle
   } finally {
     await prisma.$disconnect();
   }
 }
 
-runAnalytics();
+// Main execution with proper exit handling
+async function main() {
+  try {
+    const report = await runAnalytics();
+    logger.info(report ? 'Analytics job completed successfully' : 'No data processed', {
+      timestamp: new Date().toISOString(),
+    });
+    process.exit(0);
+  } catch (error) {
+    logger.error('Analytics job failed', { error });
+    process.exit(1);
+  }
+}
+
+main();
