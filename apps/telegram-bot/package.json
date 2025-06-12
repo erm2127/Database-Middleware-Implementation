@@ -1,0 +1,20 @@
+{
+  "name": "telegram-bot",
+  "version": "1.0.0",
+  "private": true,
+"scripts": {
+  "dev": "ts-node-dev --project tsconfig.json src/index.ts",
+    "start": "node dist/index.js",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "@types/node-telegram-bot-api": "^0.64.7",
+    "ts-node-dev": "^2.0.0",
+    "typescript": "^5.8.2"
+  }
+}

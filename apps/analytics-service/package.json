@@ -1,0 +1,16 @@
+{
+  "name": "analytics-service",
+  "version": "1.0.0",
+  "private": true,
+"scripts": {
+  "start": "ts-node --project tsconfig.json src/index.ts"
+},
+  "dependencies": {
+    "@repo/db": "workspace:*"
+  },
+  "devDependencies": {
+    "@repo/tsconfig": "workspace:*",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.2"
+  }
+}

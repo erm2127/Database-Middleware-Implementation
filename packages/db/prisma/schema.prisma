@@ -1,0 +1,41 @@
+// packages/db/prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id         String          @id @default(cuid())
+  telegramId String?         @unique
+  discordId  String?         @unique // Added for Discord Bot
+  email      String?         @unique
+  name       String?
+  createdAt  DateTime        @default(now())
+  requests   ApiRequestLog[]
+}
+
+model ApiRequestLog {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  prompt    String
+  service   String            // e.g., "telegram-bot", "discord-bot"
+  status    String            // "SUCCESS", "ERROR", "PENDING"
+  createdAt DateTime          @default(now())
+  content   GeneratedContent?
+}
+
+model GeneratedContent {
+  id          String        @id @default(cuid())
+  requestId   String        @unique
+  request     ApiRequestLog @relation(fields: [requestId], references: [id])
+  type        String        // "IMAGE", "TEXT"
+  contentUrl  String?       // URL to the generated image
+  contentText String?       // Generated text
+  createdAt   DateTime      @default(now())
+}

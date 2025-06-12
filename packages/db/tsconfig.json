@@ -1,0 +1,12 @@
+{
+  "extends": "@repo/tsconfig/base.json",
+  "compilerOptions": {
+    // This tells the compiler to resolve paths from the root of the project
+    "baseUrl": ".",
+    "paths": {
+      "@repo/*": ["../../packages/*"]
+    }
+  },
+  "include": ["."],
+  "exclude": ["node_modules", "dist"]
+}

@@ -1,0 +1,8 @@
+{
+  "extends": "@repo/tsconfig/nextjs.json",
+  "compilerOptions": {
+    "incremental": true,
+    "isolatedModules": true,
+    "jsx": "preserve"
+  }
+}

@@ -1,0 +1,74 @@
+{/* apps/docs/pages/index.mdx */}
+import { Callout } from 'nextra/components'
+
+# MCP Server API Documentation
+
+Welcome to the documentation for the Master Control Program (MCP) Server.
+This API allows different clients to request AI-generated content.
+
+<Callout type="info">
+  The base URL for all API calls is `http://localhost:4000`.
+</Callout>
+
+---
+
+## Endpoints
+
+### `POST /generate-image`
+
+This endpoint is used to request a new image generation. It logs the request, calls the AI service, stores the result, and returns the image URL.
+
+#### Request Body (JSON)
+
+| Field    | Type     | Description                                     | Required |
+|----------|----------|-------------------------------------------------|----------|
+| `prompt` | `string` | The text description of the image to create.    | Yes      |
+| `userId` | `string` | The unique ID of the user from the source platform. | Yes      |
+| `service`| `string` | A unique name for the client app (e.g., `telegram-bot`). | Yes      |
+
+#### Success Response (200 OK)
+```json
+{
+  "success": true,
+  "imageUrl": "https://example.com/path/to/image.png"
+}
+```
+
+#### Error Response (500 Internal Server Error)
+```json
+{
+  "success": false,
+  "error": "Failed to generate image"
+}
+```
+
+### `GET /logs`
+
+This endpoint retrieves the 50 most recent API request logs from the database. It's used by the admin dashboard.
+
+#### Success Response (200 OK)
+
+Returns a JSON array of log objects.
+
+```json
+[
+  {
+    "id": "clx...",
+    "userId": "clu...",
+    "prompt": "a cat wearing a hat",
+    "service": "telegram-bot",
+    "status": "SUCCESS",
+    "createdAt": "2024-05-21T10:00:00.000Z",
+    "user": {
+      "id": "clu...",
+      "telegramId": "123456789",
+      "discordId": null,
+      /* ... */
+    },
+    "content": {
+      "id": "cly...",
+      "contentUrl": "https://example.com/path/to/image.png"
+    }
+  }
+]
+```
