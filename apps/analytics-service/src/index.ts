@@ -90,7 +90,7 @@ async function runAnalytics(): Promise<AnalyticsReport | null> {
   }
 }
 
-// Run the job and handle completion
+
 async function main() {
   try {
     const report = await runAnalytics();
