@@ -1,16 +1,18 @@
-Database Middleware Implementation Group Assignment
-Software Engineering Students extension
-Group ID
+# Database Middleware Implementation Group Assignment
 
-Members:
+**Software Engineering Students Extension**  
+**Group ID**
 
-Ermias Taye - UGE/24099/13
-Paulos Zewdu - UGE/24111/13
-Edidiya Tamene - UGE/24104/13
-Hanna Abraham - UGE/24305/13
-Meseret Legesse - UGE/24327/13
-Elsabet Negash - UGE/24113/13
-Submitted to: Daniel Meteku
+## Members:
+
+- **Ermias Taye** - UGE/24099/13
+- **Paulos Zewdu** - UGE/24111/13
+- **Edidiya Tamene** - UGE/24104/13
+- **Hanna Abraham** - UGE/24305/13
+- **Meseret Legesse** - UGE/24327/13
+- **Elsabet Negash** - UGE/24113/13
+
+**Submitted to:** Daniel Meteku
 
 
 
