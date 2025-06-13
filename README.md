@@ -1,3 +1,23 @@
+# Database Middleware Implementation Group Assignment
+
+**Software Engineering Students Extension**  
+**Group ID**
+
+## Members:
+
+- **Ermias Taye** - UGE/24099/13
+- **Paulos Zewdu** - UGE/24111/13
+- **Edidiya Tamene** - UGE/24104/13
+- **Hanna Abraham** - UGE/24305/13
+- **Meseret Legesse** - UGE/24327/13
+- **Elsabet Negash** - UGE/24113/13
+
+**Submitted to:** Daniel Meteku
+
+
+
+
+
 # Turborepo starter
 
 This Turborepo starter is maintained by the Turborepo core team.
