@@ -1,4 +1,4 @@
-# Google Gemini AI chatbot v.2025 API
+## Google Gemini AI chatbot v.2025 API
 import google.generativeai as genai
 import os
 
