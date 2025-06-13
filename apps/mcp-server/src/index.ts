@@ -1,89 +1,121 @@
-import express from 'express';
+// apps/api/src/index.ts
+import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
-// Import prisma client AND the specific types we need from the middleware
+import rateLimit from 'express-rate-limit';
+import { z } from 'zod';
 import { prisma, User, ApiRequestLog } from '@repo/db';
+import { logger } from '@repo/logger';
+import { config } from './config';
+import { findOrCreateUser } from './services/userService';
+
+// Request validation schema
+const generateImageSchema = z.object({
+  prompt: z.string().min(1).max(500),
+  userId: z.string().min(1),
+  service: z.enum(['telegram-bot', 'discord-bot']),
+});
+
+// Middleware to validate API key
+const authenticate = (req: Request, res: Response, next: NextFunction) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ') || authHeader.split(' ')[1] !== config.apiKey) {
+    return res.status(401).json({ success: false, error: 'Unauthorized' });
+  }
+  next();
+};
+
+// Middleware to measure request time
+const trackResponseTime = (req: Request, res: Response, next: NextFunction) => {
+  const start = process.hrtime.bigint();
+  res.on('finish', () => {
+    const end = process.hrtime.bigint();
+    const durationMs = Number(end - start) / 1_000_000;
+    res.locals.responseTime = durationMs;
+  });
+  next();
+};
 
 const app = express();
-const port = 4000;
 
-app.use(cors());
+app.use(cors({ origin: config.corsOrigins }));
 app.use(express.json());
+app.use(trackResponseTime);
+app.use(rateLimit({
+  windowMs: 60 * 1000, // 1 minute
+  max: 10, // 10 requests per minute per user
+  keyGenerator: (req) => req.body.userId || req.ip,
+}));
+app.use(authenticate);
 
-// ... (generateImageWithAI function stays the same)
 async function generateImageWithAI(prompt: string): Promise<string> {
-  console.log(`AI is generating an image for prompt: "${prompt}"`);
-  await new Promise(resolve => setTimeout(resolve, 1500));
+  logger.info('Generating image', { prompt });
+  await new Promise((resolve) => setTimeout(resolve, 1500));
   return `https://i.pravatar.cc/512?u=${encodeURIComponent(prompt)}`;
 }
 
-
-// Helper to find or create a user based on platform ID
-async function findOrCreateUser(id: string, platform: 'telegram' | 'discord'): Promise<User> {
-  const whereClause = platform === 'telegram' ? { telegramId: id } : { discordId: id };
-  let user = await prisma.user.findUnique({ where: whereClause });
-  if (!user) {
-    const data = platform === 'telegram' ? { telegramId: id } : { discordId: id };
-    user = await prisma.user.create({ data });
-  }
-  return user;
-}
-
-// Endpoint for generating an image
-app.post('/generate-image', async (req, res) => {
-  const { prompt, userId, service } = req.body;
-
-  if (!prompt || !userId || !service) {
-    return res.status(400).json({ error: 'Missing prompt, userId, or service' });
-  }
-
-  const platform = service.includes('discord') ? 'discord' : 'telegram';
-  let log: ApiRequestLog | null = null; // Give the log a proper type
-
+app.post('/generate-image', async (req: Request, res: Response) => {
   try {
-    const user = await findOrCreateUser(userId, platform);
+    // Validate request body
+    const { prompt, userId, service } = generateImageSchema.parse(req.body);
+    const platform = service.includes('discord') ? 'discord' : 'telegram';
 
-    log = await prisma.apiRequestLog.create({
-      data: { userId: user.id, prompt, service, status: 'PENDING' },
+    // Perform database operations in a transaction
+    const [user, imageUrl] = await prisma.$transaction(async (tx) => {
+      const user = await findOrCreateUser(userId, platform, tx);
+      const log = await tx.apiRequestLog.create({
+        data: { userId: user.id, prompt, service, status: 'PENDING', responseTime: 0 },
+      });
+      const imageUrl = await generateImageWithAI(prompt);
+      await tx.generatedContent.create({
+        data: { requestId: log.id, type: 'IMAGE', contentUrl: imageUrl },
+      });
+      await tx.apiRequestLog.update({
+        where: { id: log.id },
+        data: { status: 'SUCCESS', responseTime: res.locals.responseTime },
+      });
+      return [user, imageUrl];
     });
 
-    const imageUrl = await generateImageWithAI(prompt);
-
-    await prisma.generatedContent.create({
-      data: { requestId: log.id, type: 'IMAGE', contentUrl: imageUrl },
-    });
-    await prisma.apiRequestLog.update({
-      where: { id: log.id }, data: { status: 'SUCCESS' },
-    });
-
-    res.json({ success: true, imageUrl });
+    logger.info('Image generated successfully', { userId, service, prompt });
+    res.json({ success: true, imageUrl, requestId: user.id });
   } catch (error) {
-    console.error(error);
-    if (log) {
-      await prisma.apiRequestLog.update({ where: { id: log.id }, data: { status: 'ERROR' } });
+    logger.error('Failed to generate image', { error: error instanceof Error ? error.message : 'Unknown error' });
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ success: false, error: error.errors });
     }
     res.status(500).json({ success: false, error: 'Failed to generate image' });
   }
 });
 
-// Endpoint for the Web Dashboard
-app.get('/logs', async (req, res) => {
+app.get('/logs', async (req: Request, res: Response) => {
   try {
+    const { limit = 50, offset = 0, service } = req.query;
+    const parsedLimit = Math.min(Number(limit) || 50, 100);
+    const parsedOffset = Number(offset) || 0;
+    const where = service ? { service: String(service) } : {};
+
     const logs = await prisma.apiRequestLog.findMany({
+      where,
       orderBy: { createdAt: 'desc' },
-      include: {
-        user: true,
-        content: true,
-      },
-      take: 50,
+      include: { user: true, content: true },
+      take: parsedLimit,
+      skip: parsedOffset,
     });
+
+    logger.info('Logs retrieved', { limit: parsedLimit, offset: parsedOffset, service });
     res.json(logs);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Failed to fetch logs' });
+    logger.error('Failed to fetch logs', { error: error instanceof Error ? error.message : 'Unknown error' });
+    res.status(500).json({ success: false, error: 'Failed to fetch logs' });
   }
 });
 
+// Global error handler
+app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  logger.error('Unhandled error', { error: err.message, stack: err.stack });
+  res.status(500).json({ success: false, error: 'Internal server error' });
+});
 
-app.listen(port, () => {
-  console.log(`🚀 MCP Server running at http://localhost:${port}`);
+app.listen(config.port, () => {
+  logger.info(`🚀 MCP Server running at http://localhost:${config.port}`);
 });
