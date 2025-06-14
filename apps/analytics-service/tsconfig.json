@@ -1,5 +1,8 @@
 {
   "extends": "@repo/tsconfig/base.json",
-  "include": ["src"],
+   "compilerOptions": {
+    "strict": true  // Enforce type safety
+   }
+  "include": ["src", "tests"],  // Added tests directory],
   "exclude": ["node_modules", "dist"]
 }
