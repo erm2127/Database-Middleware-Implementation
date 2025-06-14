@@ -1,5 +1,13 @@
 {
   "extends": "@repo/tsconfig/base.json",
-  "include": ["src"],
-  "exclude": ["node_modules", "dist"]
+  "compilerOptions": {
+    "strict": true,           // ← Enforce strict type-checking
+    "noEmitOnError": true,    // ← Prevent output when there are type errors
+    "sourceMap": true,        // ← Generate source maps for debugging
+    "outDir": "dist",         // ← Emit compiled files into dist/
+    "rootDir": "src",         // ← Treat src/ as project root
+    "baseUrl": "."            // ← Resolve non-relative imports from repo root
+  },
+  "include": ["src", "tests"],                      // ← Add tests/ for unit tests],
+  "exclude": ["node_modules", "dist", "**/*.spec.ts"] // ← Exclude build artifacts and test spec files]
 }
