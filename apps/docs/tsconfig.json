@@ -4,5 +4,20 @@
     "incremental": true,
     "isolatedModules": true,
     "jsx": "preserve"
+     // more type‐safety
+   "strict": true,
+  "noEmit": true,
+   "esModuleInterop": true,
+   "forceConsistentCasingInFileNames": true,
+  // handy aliases (adjust “@/” to your src folder)
+   "baseUrl": ".",
+   "paths": {
+     "@/*": ["src/*"]
+   }
+ },
+ // include all TS & JSX files under src
+  "include": ["src/**/*.ts", "src/**/*.tsx"],
+ "exclude": ["node_modules", ".next"]
+}
   }
 }
