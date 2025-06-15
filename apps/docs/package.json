@@ -18,5 +18,22 @@
     "@repo/tsconfig": "workspace:*",
     "@types/node": "^20.14.12",
     "typescript": "^5.8.2"
+    "@repo/tsconfig": "workspace:*",
+ "@types/node": "^20.14.12",
+ "typescript": "^5.8.2",
+
+ /* Linting & formatting */
+ "eslint": "^8.50.0",
+ "eslint-config-next": "^14.2.5",
+ "prettier": "^3.0.0",
+
+ /* Commit workflow */
+ "husky": "^8.0.0",
+ "lint-staged": "^14.0.0",
+ "commitizen": "^4.2.5",
+ "@commitlint/cli": "^17.0.0",
+ "@commitlint/config-conventional": "^17.0.0",
+  /* cross-env for analyze script */
+  "cross-env": "^7.0.3"
   }
 }
