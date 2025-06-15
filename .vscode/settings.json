@@ -3,5 +3,12 @@
     {
       "mode": "auto"
     }
-  ]
+  ],
+  "eslint.validate": ["javascript", "typescript", "json"],
+  "eslint.rules.custom": {
+    "no-console": "warn",
+    "indent": ["error", 2],
+    "quotes": ["error", "double"],
+    "semi": ["error", "always"]
+  }
 }
