@@ -21,6 +21,9 @@ exports.prisma = globalForPrisma.prisma ||
     new client_1.PrismaClient({
         log: ['query'],
     });
+
+
+
 if (process.env.NODE_ENV !== 'production')
     globalForPrisma.prisma = exports.prisma;
 // Export all the generated types
